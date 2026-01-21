@@ -28,7 +28,6 @@ import retrofit2.Call
 import retrofit2.Response
 
 class ReelsFeedActivity : AppCompatActivity() {
-    private val reels: MutableList<Reel> = mutableListOf()
     private lateinit var dbHelper: ReelDatabaseHelper
     private lateinit var pendingReelLikeDbHelper: PendingReelLikeDatabaseHelper
     private lateinit var vp: ViewPager2
@@ -48,7 +47,7 @@ class ReelsFeedActivity : AppCompatActivity() {
         pendingReelLikeDbHelper = PendingReelLikeDatabaseHelper(pendingReelLikeDb.pendingReelLikesDao())
 
         vp = findViewById(R.id.viewPager)
-        reelAdapter = ReelAdapter(this, reels, pendingReelLikeDbHelper)
+        reelAdapter = ReelAdapter(this, pendingReelLikeDbHelper)
         vp.adapter = reelAdapter
 
         signOutButton = findViewById(R.id.signOutButton)
@@ -139,10 +138,7 @@ class ReelsFeedActivity : AppCompatActivity() {
                 ) {
                     if (response.isSuccessful) {
                         val apiReels = response.body()?.posts?.filterNotNull() ?: emptyList()
-
-                        reels.clear()
-                        reels.addAll(apiReels)
-                        reelAdapter.notifyDataSetChanged()
+                        reelAdapter.submitList(apiReels)
 
                         lifecycleScope.launch {
                             val dbReels =
@@ -179,19 +175,16 @@ class ReelsFeedActivity : AppCompatActivity() {
         val dbReels = dbHelper.getReels()
         Log.d("dbStatus", "Loaded ${dbReels.size} reels from database")
 
-        reels.clear()
-        reels.addAll(
-            dbReels.map {
-                Reel(
-                    it.reelId,
-                    it.userName,
-                    it.profilePicture,
-                    it.reelVideo,
-                    it.likeCount,
-                    it.likedByUser,
-                )
-            },
-        )
-        reelAdapter.notifyDataSetChanged()
+        val reels = dbReels.map {
+            Reel(
+                it.reelId,
+                it.userName,
+                it.profilePicture,
+                it.reelVideo,
+                it.likeCount,
+                it.likedByUser,
+            )
+        }
+        reelAdapter.submitList(reels)
     }
 }

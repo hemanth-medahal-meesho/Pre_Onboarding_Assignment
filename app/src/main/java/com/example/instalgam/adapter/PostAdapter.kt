@@ -8,6 +8,8 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.recyclerview.widget.AsyncListDiffer
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import coil3.load
 import coil3.request.transformations
@@ -29,10 +31,29 @@ import kotlinx.coroutines.withTimeoutOrNull
 
 class PostAdapter(
     val context: Context,
-    val elements: MutableList<Post>,
     private val pendingLikeDbHelper: PendingLikeDatabaseHelper,
 ) : RecyclerView.Adapter<PostAdapter.Holder>() {
-    private var currentHolder: ReelAdapter.Holder? = null
+    private val diffUtil =
+        object : DiffUtil.ItemCallback<Post>() {
+            override fun areItemsTheSame(
+                oldItem: Post,
+                newItem: Post,
+            ): Boolean = oldItem.postId == newItem.postId
+
+            override fun areContentsTheSame(
+                oldItem: Post,
+                newItem: Post,
+            ): Boolean = oldItem == newItem
+        }
+
+    private val differ = AsyncListDiffer(this, diffUtil)
+
+    fun submitList(data: List<Post>) {
+        differ.submitList(data)
+    }
+
+    val currentList: List<Post>
+        get() = differ.currentList
 
     override fun onCreateViewHolder(
         parent: ViewGroup,
@@ -46,7 +67,7 @@ class PostAdapter(
         holder: Holder,
         position: Int,
     ) {
-        val post = elements[position]
+        val post = differ.currentList[position]
         holder.likeCount.text = post.likeCount.toString()
 
         if (post.likedByUser) {
@@ -130,7 +151,7 @@ class PostAdapter(
         holder.commentButton.setImageResource(R.drawable.comment)
     }
 
-    override fun getItemCount(): Int = elements.size
+    override fun getItemCount(): Int = differ.currentList.size
 
     fun likeUnsyncedPosts() {
         CoroutineScope(Dispatchers.IO).launch {

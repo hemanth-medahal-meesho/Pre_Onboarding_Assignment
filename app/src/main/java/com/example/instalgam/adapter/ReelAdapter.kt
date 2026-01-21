@@ -18,6 +18,8 @@ import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.PlayerView
+import androidx.recyclerview.widget.AsyncListDiffer
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import coil3.load
 import coil3.request.transformations
@@ -38,10 +40,31 @@ import kotlinx.coroutines.withTimeoutOrNull
 
 class ReelAdapter(
     val context: Context,
-    val elements: MutableList<Reel>,
     private val pendingReelLikeDbHelper: PendingReelLikeDatabaseHelper,
 ) : RecyclerView.Adapter<ReelAdapter.Holder>() {
     private var currentHolder: Holder? = null
+
+    private val diffUtil =
+        object : DiffUtil.ItemCallback<Reel>() {
+            override fun areItemsTheSame(
+                oldItem: Reel,
+                newItem: Reel,
+            ): Boolean = oldItem.reelId == newItem.reelId
+
+            override fun areContentsTheSame(
+                oldItem: Reel,
+                newItem: Reel,
+            ): Boolean = oldItem == newItem
+        }
+
+    private val differ = AsyncListDiffer(this, diffUtil)
+
+    fun submitList(data: List<Reel>) {
+        differ.submitList(data)
+    }
+
+    val currentList: List<Reel>
+        get() = differ.currentList
 
     override fun onCreateViewHolder(
         parent: ViewGroup,
@@ -56,7 +79,7 @@ class ReelAdapter(
         holder: Holder,
         position: Int,
     ) {
-        val reel = elements[position]
+        val reel = differ.currentList[position]
         var isMuted: Boolean = false
         holder.player?.release()
         holder.likeCount.text = reel.likeCount.toString()
@@ -191,7 +214,7 @@ class ReelAdapter(
         }
     }
 
-    override fun getItemCount(): Int = elements.size
+    override fun getItemCount(): Int = differ.currentList.size
 
     fun likeUnsyncedPosts() {
         CoroutineScope(Dispatchers.IO).launch {

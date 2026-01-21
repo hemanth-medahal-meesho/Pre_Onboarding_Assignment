@@ -34,7 +34,6 @@ class PostFeedActivity : AppCompatActivity() {
     private lateinit var signOutButton: Button
     private lateinit var postAdapter: PostAdapter
     private lateinit var reelsButton: Button
-    private val posts: MutableList<Post> = mutableListOf()
     private lateinit var dbHelper: PostDatabaseHelper
     private lateinit var pendingLikeDbHelper: PendingLikeDatabaseHelper
     private lateinit var networkObserver: NetworkObserver
@@ -57,7 +56,7 @@ class PostFeedActivity : AppCompatActivity() {
         pendingLikeDbHelper = PendingLikeDatabaseHelper(pendingLikeDb.pendingLikesDao())
 
         recyclerView = findViewById(R.id.recyclerView)
-        postAdapter = PostAdapter(this, posts, pendingLikeDbHelper)
+        postAdapter = PostAdapter(this, pendingLikeDbHelper)
         recyclerView.adapter = postAdapter
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.setHasFixedSize(true)
@@ -143,9 +142,7 @@ class PostFeedActivity : AppCompatActivity() {
                 ) {
                     if (response.isSuccessful) {
                         val apiPosts = response.body()?.posts?.filterNotNull() ?: emptyList()
-                        posts.clear()
-                        posts.addAll(apiPosts)
-                        postAdapter.notifyDataSetChanged()
+                        postAdapter.submitList(apiPosts)
                         lifecycleScope.launch {
                             val dbPosts =
                                 apiPosts.map {
@@ -183,19 +180,16 @@ class PostFeedActivity : AppCompatActivity() {
         val dbPosts = dbHelper.getPosts()
         Log.d("dbStatus", "Loaded ${dbPosts.size} posts from database")
 
-        posts.clear()
-        posts.addAll(
-            dbPosts.map {
-                Post(
-                    it.postId,
-                    it.userName,
-                    it.profilePicture,
-                    it.postImage,
-                    it.likeCount,
-                    it.likedByUser,
-                )
-            },
-        )
-        postAdapter.notifyDataSetChanged()
+        val posts = dbPosts.map {
+            Post(
+                it.postId,
+                it.userName,
+                it.profilePicture,
+                it.postImage,
+                it.likeCount,
+                it.likedByUser,
+            )
+        }
+        postAdapter.submitList(posts)
     }
 }
