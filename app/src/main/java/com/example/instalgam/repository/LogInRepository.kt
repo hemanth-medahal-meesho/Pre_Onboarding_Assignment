@@ -1,7 +1,18 @@
 package com.example.instalgam.repository
 
-object LogInRepository {
+import android.content.SharedPreferences
+
+class LogInRepository(
+    private val sp: SharedPreferences,
+) {
     fun getUsername(): String = "admin"
 
-    fun getPwd(): String = "password"
+    fun getPassword(): String = "password"
+
+    fun saveLoggedInUser(username: String) {
+        sp
+            .edit()
+            .putString("loginStatus", username)
+            .apply()
+    }
 }

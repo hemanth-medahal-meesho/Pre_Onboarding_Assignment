@@ -8,36 +8,68 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import com.example.instalgam.repository.LogInRepository
+import com.example.instalgam.viewmodel.LoginNav
+import com.example.instalgam.viewmodel.LoginViewModel
 
 class LoginActivity : AppCompatActivity() {
+    private val viewmodel: LoginViewModel by viewModels {
+
+        val sp: SharedPreferences = getSharedPreferences(getString(R.string.shared_preferences_file_name), Context.MODE_PRIVATE)
+
+        val repo = LogInRepository(sp)
+        object : ViewModelProvider.Factory {
+            override fun <T : ViewModel> create(modelClass: Class<T>): T = LoginViewModel(repo) as T
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
-        val username: String = "admin"
-        val password: String = "password"
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContentView(R.layout.login_page)
         val usernameField: EditText = findViewById(R.id.usernameEntry)
         val passwordField: EditText = findViewById(R.id.passwordEntry)
-        val sp: SharedPreferences = getSharedPreferences(getString(R.string.shared_preferences_file_name), Context.MODE_PRIVATE)
 
         val enterButton: Button = findViewById(R.id.logInEntry)
         enterButton.setOnClickListener {
             val uname: String = usernameField.text.toString()
             val pwd: String = passwordField.text.toString()
 
-            if (uname == username && pwd == password) {
-                with(sp.edit()) {
-                    putString(getString(R.string.logged_in_user), uname)
-                    apply()
+            viewmodel.onClick(uname, pwd)
+//            if (uname == username && pwd == password) {
+//                with(sp.edit()) {
+//                    putString(getString(R.string.logged_in_user), uname)
+//                    apply()
+//                }
+//                val intent = Intent(this@LoginActivity, PostFeedActivity::class.java)
+//                intent.putExtra("USER_USERNAME", uname)
+//                startActivity(intent)
+//            } else {
+//                Toast.makeText(this, "Invalid credentials. Please try again.", Toast.LENGTH_SHORT).show()
+//                usernameField.setText(null)
+//                passwordField.setText(null)
+//            }
+        }
+        viewmodel.navVal.observe(this) { navigation ->
+
+            navigation?.let {
+                when (it) {
+                    is LoginNav.LoginSuccess -> {
+                        val intent = Intent(this@LoginActivity, PostFeedActivity::class.java)
+                        startActivity(intent)
+                    }
+
+                    is LoginNav.LoginFailure -> {
+                        Toast.makeText(this, "Invalid credentials. Please try again.", Toast.LENGTH_SHORT).show()
+                        usernameField.setText(null)
+                        passwordField.setText(null)
+                    }
                 }
-                val intent = Intent(this@LoginActivity, PostFeedActivity::class.java)
-                intent.putExtra("USER_USERNAME", uname)
-                startActivity(intent)
-            } else {
-                Toast.makeText(this, "Invalid credentials. Please try again.", Toast.LENGTH_SHORT).show()
-                usernameField.setText(null)
-                passwordField.setText(null)
+                viewmodel.navigationComplete()
             }
         }
     }
