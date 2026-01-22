@@ -6,12 +6,19 @@ import android.content.SharedPreferences
 import android.os.Bundle
 import android.widget.Button
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
+import com.example.instalgam.viewmodel.MainViewModel
+import com.example.instalgam.viewmodel.Navigation
+import kotlinx.coroutines.launch
 import kotlin.jvm.java
 
 class MainActivity : AppCompatActivity() {
     val username: String = "admin"
     val password: String = "password"
+
+    private val viewmodel: MainViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -29,12 +36,24 @@ class MainActivity : AppCompatActivity() {
         val login: Button = findViewById(R.id.loginButton)
         val signin: Button = findViewById(R.id.signInButton)
         login.setOnClickListener {
-            val intent = Intent(this@MainActivity, LoginActivity::class.java)
-            startActivity(intent)
+            viewmodel.onLoginButtonClick()
         }
         signin.setOnClickListener {
-            val intent = Intent(this@MainActivity, SignInActivity::class.java)
-            startActivity(intent)
+            viewmodel.onSignInButtonClick()
+        }
+        viewmodel.navigationEvent.observe(this) { navigation ->
+            navigation?.let {
+                when (it) {
+                    Navigation.Login -> {
+                        startActivity(Intent(this, LoginActivity::class.java))
+                    }
+
+                    Navigation.Signin -> {
+                        startActivity(Intent(this, SignInActivity::class.java))
+                    }
+                }
+                viewmodel.navigationComplete()
+            }
         }
     }
 }
