@@ -43,7 +43,7 @@ data class LikeReelBody(
 
 interface PostsApiService {
     @GET("feed")
-    fun fetchPosts(): retrofit2.Call<PostResponse>
+    suspend fun fetchPosts(): Response<PostResponse>
 
     @POST("like")
     suspend fun likePost(
@@ -56,7 +56,7 @@ interface PostsApiService {
 
 interface ReelsApiService {
     @GET("reels")
-    fun fetchReels(): retrofit2.Call<ReelResponse>
+    suspend fun fetchReels(): Response<ReelResponse>
 
     @POST("like")
     suspend fun likeReel(

@@ -24,7 +24,6 @@ import com.example.instalgam.room.PendingReelLikeDatabaseHelper
 import com.example.instalgam.room.ReelDatabase
 import com.example.instalgam.room.ReelDatabaseHelper
 import kotlinx.coroutines.launch
-import retrofit2.Call
 import retrofit2.Response
 
 class ReelsFeedActivity : AppCompatActivity() {
@@ -125,50 +124,39 @@ class ReelsFeedActivity : AppCompatActivity() {
                 ).show()
         } else {
             Log.d("networkStatus", "Network is available")
-            fetchReelsOnline()
+            lifecycleScope.launch {
+                fetchReelsOnline()
+            }
         }
     }
 
-    private fun fetchReelsOnline() {
-        RetrofitApiClient.reelsApiService.fetchReels().enqueue(
-            object : retrofit2.Callback<ReelResponse> {
-                override fun onResponse(
-                    call: Call<ReelResponse>,
-                    response: Response<ReelResponse>,
-                ) {
-                    if (response.isSuccessful) {
-                        val apiReels = response.body()?.posts?.filterNotNull() ?: emptyList()
-                        reelAdapter.submitList(apiReels)
+    private suspend fun fetchReelsOnline() {
+        try {
+            val response = RetrofitApiClient.reelsApiService.fetchReels()
+            if (response.isSuccessful) {
+                val apiReels = response.body()?.posts?.filterNotNull() ?: emptyList()
+                reelAdapter.submitList(apiReels)
 
-                        lifecycleScope.launch {
-                            val dbReels =
-                                apiReels.map {
-                                    DatabaseReel(
-                                        it.reelId,
-                                        it.userName,
-                                        it.profilePicture,
-                                        it.reelVideo,
-                                        it.likeCount,
-                                        it.likedByUser,
-                                    )
-                                }
-                            dbHelper.saveReels(dbReels)
-                            Log.d("dbStatus", "Pushed ${dbReels.size} reels into database")
-                        }
-                    } else {
-                        Toast.makeText(this@ReelsFeedActivity, "Failed to load reels", Toast.LENGTH_SHORT).show()
+                val dbReels =
+                    apiReels.map {
+                        DatabaseReel(
+                            it.reelId,
+                            it.userName,
+                            it.profilePicture,
+                            it.reelVideo,
+                            it.likeCount,
+                            it.likedByUser,
+                        )
                     }
-                }
-
-                override fun onFailure(
-                    call: Call<ReelResponse>,
-                    t: Throwable,
-                ) {
-                    Log.e("apiCall", t.message.toString())
-                    Toast.makeText(this@ReelsFeedActivity, "An error occurred: ${t.message}", Toast.LENGTH_SHORT).show()
-                }
-            },
-        )
+                dbHelper.saveReels(dbReels)
+                Log.d("dbStatus", "Pushed ${dbReels.size} reels into database")
+            } else {
+                Toast.makeText(this@ReelsFeedActivity, "Failed to load reels", Toast.LENGTH_SHORT).show()
+            }
+        } catch (e: Exception) {
+            Log.e("apiCall", e.message.toString())
+            Toast.makeText(this@ReelsFeedActivity, "An error occurred: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private suspend fun fetchReelsOffline() {

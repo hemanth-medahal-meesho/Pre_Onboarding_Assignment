@@ -26,7 +26,6 @@ import com.example.instalgam.room.PendingLikeDatabaseHelper
 import com.example.instalgam.room.PostDatabase
 import com.example.instalgam.room.PostDatabaseHelper
 import kotlinx.coroutines.launch
-import retrofit2.Call
 import retrofit2.Response
 
 class PostFeedActivity : AppCompatActivity() {
@@ -129,51 +128,40 @@ class PostFeedActivity : AppCompatActivity() {
 //            fetchPostsOffline()
         } else {
             Log.d("networkStatus", "Network is available")
-            fetchPostsOnline()
+            lifecycleScope.launch {
+                fetchPostsOnline()
+            }
         }
     }
 
-    private fun fetchPostsOnline() {
-        RetrofitApiClient.postsApiService.fetchPosts().enqueue(
-            object : retrofit2.Callback<PostResponse> {
-                override fun onResponse(
-                    call: Call<PostResponse>,
-                    response: Response<PostResponse>,
-                ) {
-                    if (response.isSuccessful) {
-                        val apiPosts = response.body()?.posts?.filterNotNull() ?: emptyList()
-                        postAdapter.submitList(apiPosts)
-                        lifecycleScope.launch {
-                            val dbPosts =
-                                apiPosts.map {
-                                    DatabasePost(
-                                        it.postId,
-                                        it.userName,
-                                        it.profilePicture,
-                                        it.postImage,
-                                        it.likeCount,
-                                        it.likedByUser,
-                                    )
-                                }
-                            Log.d("dbStatus", "Pushed ${dbPosts.size} posts into database")
-                            dbHelper.savePosts(dbPosts)
-                        }
-                    } else {
-                        Toast.makeText(this@PostFeedActivity, "Failed to load posts", Toast.LENGTH_SHORT).show()
-//                        fetchPostsOffline()
+    private suspend fun fetchPostsOnline() {
+        try {
+            val response = RetrofitApiClient.postsApiService.fetchPosts()
+            if (response.isSuccessful) {
+                val apiPosts = response.body()?.posts?.filterNotNull() ?: emptyList()
+                postAdapter.submitList(apiPosts)
+                val dbPosts =
+                    apiPosts.map {
+                        DatabasePost(
+                            it.postId,
+                            it.userName,
+                            it.profilePicture,
+                            it.postImage,
+                            it.likeCount,
+                            it.likedByUser,
+                        )
                     }
-                }
-
-                override fun onFailure(
-                    call: Call<PostResponse>,
-                    t: Throwable,
-                ) {
-                    Toast.makeText(this@PostFeedActivity, "An error occurred: ${t.message}", Toast.LENGTH_SHORT).show()
+                Log.d("dbStatus", "Pushed ${dbPosts.size} posts into database")
+                dbHelper.savePosts(dbPosts)
+            } else {
+                Toast.makeText(this@PostFeedActivity, "Failed to load posts", Toast.LENGTH_SHORT).show()
+//                        fetchPostsOffline()
+            }
+        } catch (e: Exception) {
+            Toast.makeText(this@PostFeedActivity, "An error occurred: ${e.message}", Toast.LENGTH_SHORT).show()
 //                    fetchPostsOffline()
-                    Log.e("apiStatus", t.message.toString())
-                }
-            },
-        )
+            Log.e("apiStatus", e.message.toString())
+        }
     }
 
     private suspend fun fetchPostsOffline() {
