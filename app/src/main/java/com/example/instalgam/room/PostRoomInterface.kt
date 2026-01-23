@@ -115,13 +115,13 @@ abstract class PendingLikeDatabase : RoomDatabase() {
 class PostDatabaseHelper(
     private val postDao: PostDao,
 ) {
-    suspend fun getPosts(): List<DatabasePost> = postDao.fetchAll()
-
-    suspend fun savePosts(posts: List<DatabasePost>) {
-        postDao.deleteAll()
-        postDao.insertAll(posts)
-    }
-
+//    suspend fun getPosts(): List<DatabasePost> = postDao.fetchAll()
+//
+//    suspend fun savePosts(posts: List<DatabasePost>) {
+//        postDao.deleteAll()
+//        postDao.insertAll(posts)
+//    }
+//
     suspend fun likePost(postID: String): Boolean =
         withContext(Dispatchers.IO) {
             postDao.like(postID)
@@ -186,12 +186,6 @@ class PendingLikeDatabaseHelper(
     suspend fun removePendingLike(postId: String) {
         withContext(Dispatchers.IO) {
             pendingLikesDao.removeLike(postId)
-        }
-    }
-
-    suspend fun flushAllPendingLikes() {
-        withContext(Dispatchers.IO) {
-            pendingLikesDao.flush()
         }
     }
 }

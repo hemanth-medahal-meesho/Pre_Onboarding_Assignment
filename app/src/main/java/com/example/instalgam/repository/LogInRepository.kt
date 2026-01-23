@@ -1,6 +1,7 @@
 package com.example.instalgam.repository
 
 import android.content.SharedPreferences
+import androidx.core.content.edit
 
 class LogInRepository(
     private val sp: SharedPreferences,
@@ -11,8 +12,8 @@ class LogInRepository(
 
     fun saveLoggedInUser(username: String) {
         sp
-            .edit()
-            .putString("loginStatus", username)
-            .apply()
+            .edit {
+                putString("loginStatus", username)
+            }
     }
 }
