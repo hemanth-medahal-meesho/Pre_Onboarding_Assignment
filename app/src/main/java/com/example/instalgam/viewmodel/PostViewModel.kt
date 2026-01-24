@@ -1,13 +1,14 @@
 package com.example.instalgam.viewmodel
 
-import android.net.ConnectivityManager
-import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
 import com.example.instalgam.model.Post
 import com.example.instalgam.repository.PostRepository
+import com.example.instalgam.room.DatabasePost
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 class PostViewModel(
@@ -20,11 +21,26 @@ class PostViewModel(
 
     private var hasDisconnected = false
     private var hasFetched = false
-    private val _posts = MutableLiveData<List<Post>?>()
-    val posts: LiveData<List<Post>?> = _posts
+
+    val posts: LiveData<List<Post>> =
+        repository
+            .getPosts()
+            .map { dbPosts: List<DatabasePost> ->
+                dbPosts.map { dbPost ->
+                    Post(
+                        dbPost.postId,
+                        dbPost.userName,
+                        dbPost.profilePicture,
+                        dbPost.postImage,
+                        dbPost.likeCount,
+                        dbPost.likedByUser,
+                    )
+                }
+            }.asLiveData()
 
     init {
-        fetchOfflinePosts()
+//        fetchOfflinePosts()
+        fetchOnlinePosts()
     }
 
     fun onSignOutButtonClick() {
@@ -40,35 +56,36 @@ class PostViewModel(
         _navigationEvent.value = null
     }
 
-//    fun checkConnectivityStatus(): Boolean {
-//        if (connectivityManager.activeNetwork == null) {
-//            Log.d("networkStatus", "Network is not available on startup")
-//            return false
-// //            Toast
-// //                .makeText(
-// //                    this@PostFeedActivity,
-// //                    "Device is not connected to a network. Loading posts from Room database",
-// //                    Toast.LENGTH_SHORT,
-// //                ).show()
-// //            fetchPostsOffline()
-//        } else {
-//            Log.d("networkStatus", "Network is available")
-//            return true
-// //            lifecycleScope.launch {
-// //                fetchPostsOnline()
-// //            }
-//        }
-//    }
-
     fun fetchOfflinePosts() {
+        // Posts are now automatically observed from Room database Flow
+        // This method can be removed or kept for initial loading if needed
         viewModelScope.launch {
-            _posts.value = repository.fetchPostsOffline()
+            // Initial posts are loaded from database via Flow
+            // This is just for ensuring we have data on first load
+        }
+    }
+
+    fun onClickLike(
+        postID: String,
+        position: Int,
+    ) {
+        viewModelScope.launch {
+            val likeStatus = repository.getLikeStatus(postID)
+
+            // Update database - the Flow will automatically emit new values and update the UI
+            if (likeStatus) {
+                repository.dislikePost(postID)
+            } else {
+                repository.likePost(postID)
+            }
         }
     }
 
     fun fetchOnlinePosts() {
         viewModelScope.launch {
-            _posts.value = repository.fetchPostsOnline()
+            // Fetch from API and save to database
+            // The Flow will automatically emit the updated posts
+            repository.fetchPostsOnline()
         }
     }
 
@@ -76,11 +93,6 @@ class PostViewModel(
         if (!isConnected) {
             hasDisconnected = true
             return
-        }
-
-        if (!hasFetched) {
-            hasFetched = true
-            fetchOnlinePosts()
         }
 
         if (hasDisconnected) {

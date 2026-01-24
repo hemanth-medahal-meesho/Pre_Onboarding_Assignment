@@ -1,5 +1,6 @@
 package com.example.instalgam.repository
 
+import android.R
 import android.content.SharedPreferences
 import android.util.Log
 import androidx.core.content.edit
@@ -9,16 +10,19 @@ import com.example.instalgam.model.Post
 import com.example.instalgam.room.DatabasePost
 import com.example.instalgam.room.PostDao
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 
 class PostRepository(
     val sp: SharedPreferences,
     val postDao: PostDao,
 ) {
-    suspend fun getPosts(): List<DatabasePost> = postDao.fetchAll()
+    fun getPosts(): Flow<List<DatabasePost>> = postDao.fetchLivePosts()
+
+    suspend fun getPostsAtFirst(): List<DatabasePost> = postDao.fetchAll()
 
     suspend fun fetchPostsOffline(): List<Post> {
-        val dbPosts = getPosts()
+        val dbPosts = getPostsAtFirst()
         Log.d("dbStatus", "Loaded ${dbPosts.size} posts from database")
 
         val posts =
@@ -93,6 +97,10 @@ class PostRepository(
                 false
             }
         }
+
+    suspend fun getLikeStatus(postID: String): Boolean = postDao.likeStatus(postID)
+
+    suspend fun getLikeCount(postID: String): Int = postDao.likeCount(postID)
 
     suspend fun dislikePost(postID: String): Boolean =
 

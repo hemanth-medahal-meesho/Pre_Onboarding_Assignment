@@ -15,6 +15,7 @@ import androidx.room.RoomDatabase
 import com.example.instalgam.apiClient.LikeBody
 import com.example.instalgam.apiClient.RetrofitApiClient
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 
 @Entity
@@ -55,6 +56,15 @@ interface PendingLikesDao {
 interface PostDao {
     @Query("SELECT * FROM DatabasePost")
     suspend fun fetchAll(): List<DatabasePost>
+
+    @Query("SELECT * FROM DatabasePost")
+    fun fetchLivePosts(): Flow<List<DatabasePost>>
+
+    @Query("""SELECT liked_by_user FROM DatabasePost WHERE postId == :postid""")
+    suspend fun likeStatus(postid: String): Boolean
+
+    @Query("""SELECT like_count FROM DatabasePost WHERE postId == :postid""")
+    suspend fun likeCount(postid: String): Int
 
     @Query("""UPDATE DatabasePost SET like_count = like_count + 1, liked_by_user = 1 WHERE postId = :postID""")
     suspend fun like(postID: String)
@@ -122,43 +132,43 @@ class PostDatabaseHelper(
 //        postDao.insertAll(posts)
 //    }
 //
-    suspend fun likePost(postID: String): Boolean =
-        withContext(Dispatchers.IO) {
-            postDao.like(postID)
-
-            Log.d("dbStatus", "$postID liked")
-            try {
-                val response =
-                    RetrofitApiClient.postsApiService
-                        .likePost(LikeBody(true, postID))
-
-                if (response.isSuccessful) {
-                    true
-                } else {
-                    false
-                }
-            } catch (e: Exception) {
-                false
-            }
-        }
-
-    suspend fun dislikePost(postID: String): Boolean =
-
-        withContext(Dispatchers.IO) {
-            postDao.dislike(postID)
-            Log.d("dbStatus", "$postID disliked")
-            try {
-                val response = RetrofitApiClient.postsApiService.dislikePost()
-
-                if (response.isSuccessful) {
-                    true
-                } else {
-                    false
-                }
-            } catch (e: Exception) {
-                false
-            }
-        }
+//    suspend fun likePost(postID: String): Boolean =
+//        withContext(Dispatchers.IO) {
+//            postDao.like(postID)
+//
+//            Log.d("dbStatus", "$postID liked")
+//            try {
+//                val response =
+//                    RetrofitApiClient.postsApiService
+//                        .likePost(LikeBody(true, postID))
+//
+//                if (response.isSuccessful) {
+//                    true
+//                } else {
+//                    false
+//                }
+//            } catch (e: Exception) {
+//                false
+//            }
+//        }
+//
+//    suspend fun dislikePost(postID: String): Boolean =
+//
+//        withContext(Dispatchers.IO) {
+//            postDao.dislike(postID)
+//            Log.d("dbStatus", "$postID disliked")
+//            try {
+//                val response = RetrofitApiClient.postsApiService.dislikePost()
+//
+//                if (response.isSuccessful) {
+//                    true
+//                } else {
+//                    false
+//                }
+//            } catch (e: Exception) {
+//                false
+//            }
+//        }
 }
 
 class PendingLikeDatabaseHelper(

@@ -65,7 +65,7 @@ class PostFeedActivity : AppCompatActivity() {
         pendingLikeDbHelper = PendingLikeDatabaseHelper(pendingLikeDb.pendingLikesDao())
 
         recyclerView = findViewById(R.id.recyclerView)
-        postAdapter = PostAdapter(this, pendingLikeDbHelper)
+        postAdapter = PostAdapter(this, pendingLikeDbHelper, viewModel::onClickLike)
         recyclerView.adapter = postAdapter
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.setHasFixedSize(true)
@@ -111,10 +111,8 @@ class PostFeedActivity : AppCompatActivity() {
                 viewModel.navigationComplete()
             }
         }
-        viewModel.posts.observe(this) { posts ->
-            posts?.let {
-                postAdapter.submitList(it)
-            }
+        viewModel.posts.observe(this) {
+            postAdapter.submitList(it)
         }
         // Always fetch posts from the DB first
 //        lifecycleScope.launch {

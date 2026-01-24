@@ -18,7 +18,6 @@ import com.example.instalgam.R
 import com.example.instalgam.apiClient.LikeBody
 import com.example.instalgam.apiClient.RetrofitApiClient
 import com.example.instalgam.model.Post
-import com.example.instalgam.room.PendingLike
 import com.example.instalgam.room.PendingLikeDatabaseHelper
 import com.example.instalgam.room.PostDatabase
 import com.example.instalgam.room.PostDatabaseHelper
@@ -26,12 +25,11 @@ import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
 
 class PostAdapter(
     val context: Context,
     private val pendingLikeDbHelper: PendingLikeDatabaseHelper,
+    private val onClickLike: (String, Int) -> Unit,
 ) : RecyclerView.Adapter<PostAdapter.Holder>() {
     private val diffUtil =
         object : DiffUtil.ItemCallback<Post>() {
@@ -78,69 +76,13 @@ class PostAdapter(
 
         holder.username.text = post.userName
 
-        val db = PostDatabase.getInstance(context.applicationContext)
-        val dbHelper = PostDatabaseHelper(db.postDao())
+//        val db = PostDatabase.getInstance(context.applicationContext)
+//        val dbHelper = PostDatabaseHelper(db.postDao())
 
         holder.likeButton.setOnClickListener {
-            val previousLikedState = post.likedByUser
-            val previousLikeCount = post.likeCount
-
-            post.likedByUser = !previousLikedState
-            post.likeCount += if (post.likedByUser) 1 else -1
-
-            holder.likeCount.text = post.likeCount.toString()
-            holder.likeButton.setImageResource(
-                if (post.likedByUser) R.drawable.liked_heart else R.drawable.unliked_heart,
-            )
-
-            fun snackbarDisplay() {
-//                post.likedByUser = previousLikedState
-//                post.likeCount = previousLikeCount
-//                holder.likeCount.text = post.likeCount.toString()
-//                holder.likeButton.setImageResource(
-//                    if (post.likedByUser) R.drawable.liked_heart else R.drawable.unliked_heart,
-//                )
-                val rootView =
-                    (holder.itemView.context as Activity)
-                        .findViewById<View>(android.R.id.content)
-
-                Snackbar.make(rootView, "API call failed!", Snackbar.LENGTH_SHORT).show()
-            }
-
-            CoroutineScope(Dispatchers.Main).launch {
-                try {
-                    val isSuccess =
-                        withTimeoutOrNull(2000L) {
-                            if (previousLikedState) {
-                                dbHelper.dislikePost(post.postId)
-                            } else {
-                                dbHelper.likePost(post.postId)
-                            }
-                        } ?: false
-
-                    if (isSuccess) {
-                        Log.d("apiStatus", "Sync successful")
-                    } else {
-                        Log.e("apiStatus", "Sync failed, rolling back UI")
-                        snackbarDisplay()
-                        val existingPendingLike = pendingLikeDbHelper.getPendingLike(post.postId)
-                        if (existingPendingLike == null) {
-                            pendingLikeDbHelper.addPendingLike(post.postId, post.likedByUser)
-                        } else {
-                            pendingLikeDbHelper.removePendingLike(post.postId)
-                        }
-                    }
-                } catch (e: Exception) {
-                    Log.e("apiStatus", "Error: ${e.message}")
-                    snackbarDisplay()
-                    val existingPendingLike = pendingLikeDbHelper.getPendingLike(post.postId)
-                    if (existingPendingLike == null) {
-                        pendingLikeDbHelper.addPendingLike(post.postId, post.likedByUser)
-                    } else {
-                        pendingLikeDbHelper.removePendingLike(post.postId)
-                    }
-                }
-            }
+            // Call the ViewModel's onClickLike - database update will trigger Flow emission
+            // and automatically update the UI via onBindViewHolder
+            onClickLike(post.postId, position)
         }
 
         holder.pfpImage.load(post.profilePicture) {
