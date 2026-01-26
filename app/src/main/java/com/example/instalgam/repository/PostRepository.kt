@@ -1,6 +1,5 @@
 package com.example.instalgam.repository
 
-import android.R
 import android.content.SharedPreferences
 import android.util.Log
 import androidx.core.content.edit
@@ -8,6 +7,8 @@ import com.example.instalgam.apiClient.LikeBody
 import com.example.instalgam.apiClient.RetrofitApiClient
 import com.example.instalgam.model.Post
 import com.example.instalgam.room.DatabasePost
+import com.example.instalgam.room.PendingLike
+import com.example.instalgam.room.PendingLikesDao
 import com.example.instalgam.room.PostDao
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -16,6 +17,7 @@ import kotlinx.coroutines.withContext
 class PostRepository(
     val sp: SharedPreferences,
     val postDao: PostDao,
+    val pendingLikesDao: PendingLikesDao,
 ) {
     fun getPosts(): Flow<List<DatabasePost>> = postDao.fetchLivePosts()
 
@@ -40,7 +42,7 @@ class PostRepository(
         return posts
     }
 
-    suspend fun fetchPostsOnline(): List<Post> {
+    suspend fun fetchPostsOnline(): Pair<Int, String?> {
         try {
             val response = RetrofitApiClient.postsApiService.fetchPosts()
             if (response.isSuccessful) {
@@ -60,17 +62,19 @@ class PostRepository(
                 Log.d("dbStatus", "Pushed ${dbPosts.size} posts into database")
 //                dbHelper.savePosts(dbPosts)
                 savePosts(dbPosts)
-                return apiPosts
+                return Pair(0, null)
             } else {
 //                Toast.makeText(this@PostFeedActivity, "Failed to load posts", Toast.LENGTH_SHORT).show()
 //                        fetchPostsOffline()
+                return Pair(1, null)
             }
         } catch (e: Exception) {
 //            Toast.makeText(this@PostFeedActivity, "An error occurred: ${e.message}", Toast.LENGTH_SHORT).show()
 //                    fetchPostsOffline()
+
             Log.e("apiStatus", e.message.toString())
+            return Pair(2, e.message)
         }
-        return emptyList()
     }
 
     suspend fun savePosts(posts: List<DatabasePost>) {
@@ -102,6 +106,20 @@ class PostRepository(
 
     suspend fun getLikeCount(postID: String): Int = postDao.likeCount(postID)
 
+    suspend fun getPendingLike(postId: String): PendingLike? =
+        withContext(Dispatchers.IO) {
+            pendingLikesDao.getByPostId(postId)
+        }
+
+    suspend fun addPendingLike(
+        postId: String,
+        liked: Boolean,
+    ) {
+        withContext(Dispatchers.IO) {
+            pendingLikesDao.addLike(PendingLike(postId, liked))
+        }
+    }
+
     suspend fun dislikePost(postID: String): Boolean =
 
         withContext(Dispatchers.IO) {
@@ -123,6 +141,17 @@ class PostRepository(
     fun signOutUser() {
         sp.edit {
             putString("loginStatus", null)
+        }
+    }
+
+    suspend fun getAllPendingLikes(): List<PendingLike> =
+        withContext(Dispatchers.IO) {
+            pendingLikesDao.fetchAll()
+        }
+
+    suspend fun removePendingLike(postId: String) {
+        withContext(Dispatchers.IO) {
+            pendingLikesDao.removeLike(postId)
         }
     }
 }

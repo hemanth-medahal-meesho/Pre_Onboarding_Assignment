@@ -2,9 +2,7 @@ package com.example.instalgam
 
 import android.content.Context
 import android.content.Intent
-import android.net.ConnectivityManager
 import android.os.Bundle
-import android.util.Log
 import android.widget.Button
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
@@ -18,17 +16,15 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.instalgam.adapter.PostAdapter
-import com.example.instalgam.apiClient.RetrofitApiClient
 import com.example.instalgam.connectivity.NetworkObserver
-import com.example.instalgam.model.Post
 import com.example.instalgam.repository.PostRepository
-import com.example.instalgam.room.DatabasePost
 import com.example.instalgam.room.PendingLikeDatabase
 import com.example.instalgam.room.PendingLikeDatabaseHelper
 import com.example.instalgam.room.PostDatabase
 import com.example.instalgam.room.PostDatabaseHelper
 import com.example.instalgam.viewmodel.NavigationEvent
 import com.example.instalgam.viewmodel.PostViewModel
+import com.example.instalgam.viewmodel.ToastEvent
 import kotlinx.coroutines.launch
 
 class PostFeedActivity : AppCompatActivity() {
@@ -41,7 +37,12 @@ class PostFeedActivity : AppCompatActivity() {
     private lateinit var networkObserver: NetworkObserver
     private val viewModel: PostViewModel by viewModels {
         val sp = getSharedPreferences("loginStatus", Context.MODE_PRIVATE)
-        val repository = PostRepository(sp, PostDatabase.getInstance(applicationContext).postDao())
+        val repository =
+            PostRepository(
+                sp,
+                PostDatabase.getInstance(applicationContext).postDao(),
+                PendingLikeDatabase.getInstance(applicationContext).pendingLikesDao(),
+            )
         object : ViewModelProvider.Factory {
             override fun <T : ViewModel> create(modelClass: Class<T>): T = PostViewModel(repository) as T
         }
@@ -61,11 +62,11 @@ class PostFeedActivity : AppCompatActivity() {
 //        val db = PostDatabase.getInstance(applicationContext)
 //        dbHelper = PostDatabaseHelper(db.postDao())
 
-        val pendingLikeDb = PendingLikeDatabase.getInstance(applicationContext)
-        pendingLikeDbHelper = PendingLikeDatabaseHelper(pendingLikeDb.pendingLikesDao())
+//        val pendingLikeDb = PendingLikeDatabase.getInstance(applicationContext)
+//        pendingLikeDbHelper = PendingLikeDatabaseHelper(pendingLikeDb.pendingLikesDao())
 
         recyclerView = findViewById(R.id.recyclerView)
-        postAdapter = PostAdapter(this, pendingLikeDbHelper, viewModel::onClickLike)
+        postAdapter = PostAdapter(this, viewModel::onClickLike)
         recyclerView.adapter = postAdapter
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.setHasFixedSize(true)
@@ -114,11 +115,32 @@ class PostFeedActivity : AppCompatActivity() {
         viewModel.posts.observe(this) {
             postAdapter.submitList(it)
         }
-        // Always fetch posts from the DB first
-//        lifecycleScope.launch {
-//            viewModel.fetchOfflinePosts()
-//        }
-//        checkConnectivityStatus()
+        viewModel.toastEvent.observe(this) { message ->
+            message?.let {
+                when (it) {
+                    is ToastEvent.FailedToLoadPosts -> {
+                        Toast.makeText(this, "Failed to load posts", Toast.LENGTH_SHORT).show()
+                    }
+
+                    is ToastEvent.ErrorOccured -> {
+                        Toast.makeText(this, "An error occurred: ${it.errorMessage}", Toast.LENGTH_SHORT).show()
+                    }
+
+                    is ToastEvent.FailedToLikePost -> {
+                        Toast.makeText(this, "Failed to like post", Toast.LENGTH_SHORT).show()
+                    }
+
+                    is ToastEvent.FailedToDislikePost -> {
+                        Toast.makeText(this, "Failed to dislike post", Toast.LENGTH_SHORT).show()
+                    }
+
+                    is ToastEvent.NoConnection -> {
+                        Toast.makeText(this, "No internet connection, loading posts from the Room database", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        }
+// checkConnectivityStatus()
         networkObserver = NetworkObserver(applicationContext)
         observeNetworkStatus()
     }

@@ -1,10 +1,13 @@
 package com.example.instalgam.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
+import com.example.instalgam.apiClient.LikeBody
+import com.example.instalgam.apiClient.RetrofitApiClient
 import com.example.instalgam.model.Post
 import com.example.instalgam.repository.PostRepository
 import com.example.instalgam.room.DatabasePost
@@ -16,11 +19,10 @@ class PostViewModel(
 ) : ViewModel() {
     private val _navigationEvent = MutableLiveData<NavigationEvent?>()
     val navigationEvent: LiveData<NavigationEvent?> = _navigationEvent
-    private val _postEvent = MutableLiveData<PostEvent?>()
-    val postEvent: LiveData<PostEvent?> = _postEvent
-
+    private val _toastEvent = MutableLiveData<ToastEvent?>()
+    val toastEvent: LiveData<ToastEvent?> = _toastEvent
     private var hasDisconnected = false
-    private var hasFetched = false
+//    private var hasFetched = false
 
     val posts: LiveData<List<Post>> =
         repository
@@ -56,14 +58,10 @@ class PostViewModel(
         _navigationEvent.value = null
     }
 
-    fun fetchOfflinePosts() {
-        // Posts are now automatically observed from Room database Flow
-        // This method can be removed or kept for initial loading if needed
-        viewModelScope.launch {
-            // Initial posts are loaded from database via Flow
-            // This is just for ensuring we have data on first load
-        }
-    }
+//    fun fetchOfflinePosts() {
+//        viewModelScope.launch {
+//        }
+//    }
 
     fun onClickLike(
         postID: String,
@@ -72,32 +70,93 @@ class PostViewModel(
         viewModelScope.launch {
             val likeStatus = repository.getLikeStatus(postID)
 
-            // Update database - the Flow will automatically emit new values and update the UI
             if (likeStatus) {
-                repository.dislikePost(postID)
+                val status = repository.dislikePost(postID)
+                if (!status) {
+                    val existingPendingLike = repository.getPendingLike(postID)
+                    if (existingPendingLike == null) {
+                        repository.addPendingLike(postID, true)
+                    } else {
+                        repository.removePendingLike(postID)
+                    }
+                    _toastEvent.value = ToastEvent.FailedToDislikePost
+                }
             } else {
-                repository.likePost(postID)
+                val status = repository.likePost(postID)
+
+                if (!status) {
+                    val existingPendingLike = repository.getPendingLike(postID)
+                    if (existingPendingLike == null) {
+                        repository.addPendingLike(postID, false)
+                    } else {
+                        repository.removePendingLike(postID)
+                    }
+                    _toastEvent.value = ToastEvent.FailedToLikePost
+                }
             }
         }
     }
 
     fun fetchOnlinePosts() {
         viewModelScope.launch {
-            // Fetch from API and save to database
-            // The Flow will automatically emit the updated posts
-            repository.fetchPostsOnline()
+            val status = repository.fetchPostsOnline()
+            if (status.first == 1) {
+                _toastEvent.value = ToastEvent.FailedToLoadPosts
+            } else if (status.first == 2) {
+                _toastEvent.value = ToastEvent.ErrorOccured(status.second!!)
+            }
         }
     }
 
     fun onNetworkStatusChanged(isConnected: Boolean) {
-        if (!isConnected) {
+        if (!hasDisconnected && !isConnected) {
+            _toastEvent.value = ToastEvent.NoConnection
             hasDisconnected = true
             return
         }
 
-        if (hasDisconnected) {
-//            syncUnsyncedLikes()
-            hasDisconnected = false
+        if (!isConnected) {
+            likeUnsyncedPosts()
+        }
+
+//        if (hasDisconnected && isConnected) {
+//        }
+//        if (!isConnected) {
+//            hasDisconnected = true
+//            return
+//        }
+//
+//        if (hasDisconnected) {
+//            likeUnsyncedPosts()
+//            hasDisconnected = false
+//        }
+    }
+
+    fun likeUnsyncedPosts() {
+        viewModelScope.launch {
+            val pendingLikes = repository.getAllPendingLikes()
+            Log.d("pendingLikes", "Size of pending likes: ${pendingLikes.size}")
+
+            for (pending in pendingLikes) {
+                Log.d("apiStatus", "Trying like for: ${pending.postId}")
+                try {
+                    val response =
+                        if (pending.liked) {
+                            RetrofitApiClient.postsApiService.likePost(
+                                LikeBody(true, pending.postId),
+                            )
+                        } else {
+                            RetrofitApiClient.postsApiService.dislikePost()
+                        }
+
+                    if (response.isSuccessful) {
+                        repository.removePendingLike(pending.postId)
+                        Log.d("apiStatus", "Synced like: ${pending.postId}")
+                    }
+                } catch (e: Exception) {
+                    Log.e("apiStatus", "Sync failed", e)
+                }
+            }
         }
     }
 }
@@ -108,14 +167,16 @@ sealed class NavigationEvent {
     object Reels : NavigationEvent()
 }
 
-sealed class PostEvent {
-    object Like : PostEvent()
+sealed class ToastEvent {
+    object FailedToLoadPosts : ToastEvent()
 
-    object PostsUpdate : PostEvent()
-}
+    data class ErrorOccured(
+        val errorMessage: String,
+    ) : ToastEvent()
 
-sealed class NetworkStatus {
-    object Connected : NetworkStatus()
+    object FailedToLikePost : ToastEvent()
 
-    object NotConnected : NetworkStatus()
+    object FailedToDislikePost : ToastEvent()
+
+    object NoConnection : ToastEvent()
 }

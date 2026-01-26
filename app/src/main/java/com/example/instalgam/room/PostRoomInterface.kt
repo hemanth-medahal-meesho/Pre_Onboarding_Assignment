@@ -1,7 +1,6 @@
 package com.example.instalgam.room
 
 import android.content.Context
-import android.util.Log
 import androidx.room.ColumnInfo
 import androidx.room.Dao
 import androidx.room.Database
@@ -12,8 +11,6 @@ import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import com.example.instalgam.apiClient.LikeBody
-import com.example.instalgam.apiClient.RetrofitApiClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
@@ -174,28 +171,28 @@ class PostDatabaseHelper(
 class PendingLikeDatabaseHelper(
     private val pendingLikesDao: PendingLikesDao,
 ) {
-    suspend fun getAllPendingLikes(): List<PendingLike> =
-        withContext(Dispatchers.IO) {
-            pendingLikesDao.fetchAll()
-        }
-
-    suspend fun getPendingLike(postId: String): PendingLike? =
-        withContext(Dispatchers.IO) {
-            pendingLikesDao.getByPostId(postId)
-        }
-
-    suspend fun addPendingLike(
-        postId: String,
-        liked: Boolean,
-    ) {
-        withContext(Dispatchers.IO) {
-            pendingLikesDao.addLike(PendingLike(postId, liked))
-        }
-    }
-
-    suspend fun removePendingLike(postId: String) {
-        withContext(Dispatchers.IO) {
-            pendingLikesDao.removeLike(postId)
-        }
-    }
+//    suspend fun getAllPendingLikes(): List<PendingLike> =
+//        withContext(Dispatchers.IO) {
+//            pendingLikesDao.fetchAll()
+//        }
+//
+//    suspend fun getPendingLike(postId: String): PendingLike? =
+//        withContext(Dispatchers.IO) {
+//            pendingLikesDao.getByPostId(postId)
+//        }
+//
+//    suspend fun addPendingLike(
+//        postId: String,
+//        liked: Boolean,
+//    ) {
+//        withContext(Dispatchers.IO) {
+//            pendingLikesDao.addLike(PendingLike(postId, liked))
+//        }
+//    }
+//
+//    suspend fun removePendingLike(postId: String) {
+//        withContext(Dispatchers.IO) {
+//            pendingLikesDao.removeLike(postId)
+//        }
+//    }
 }

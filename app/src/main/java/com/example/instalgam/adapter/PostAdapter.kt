@@ -1,8 +1,6 @@
 package com.example.instalgam.adapter
 
-import android.app.Activity
 import android.content.Context
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -15,20 +13,11 @@ import coil3.load
 import coil3.request.transformations
 import coil3.transform.CircleCropTransformation
 import com.example.instalgam.R
-import com.example.instalgam.apiClient.LikeBody
-import com.example.instalgam.apiClient.RetrofitApiClient
 import com.example.instalgam.model.Post
 import com.example.instalgam.room.PendingLikeDatabaseHelper
-import com.example.instalgam.room.PostDatabase
-import com.example.instalgam.room.PostDatabaseHelper
-import com.google.android.material.snackbar.Snackbar
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 class PostAdapter(
     val context: Context,
-    private val pendingLikeDbHelper: PendingLikeDatabaseHelper,
     private val onClickLike: (String, Int) -> Unit,
 ) : RecyclerView.Adapter<PostAdapter.Holder>() {
     private val diffUtil =
@@ -76,52 +65,47 @@ class PostAdapter(
 
         holder.username.text = post.userName
 
-//        val db = PostDatabase.getInstance(context.applicationContext)
-//        val dbHelper = PostDatabaseHelper(db.postDao())
-
-        holder.likeButton.setOnClickListener {
-            // Call the ViewModel's onClickLike - database update will trigger Flow emission
-            // and automatically update the UI via onBindViewHolder
-            onClickLike(post.postId, position)
-        }
-
         holder.pfpImage.load(post.profilePicture) {
             transformations(CircleCropTransformation())
         }
         holder.postImage.load(post.postImage)
         holder.shareButton.setImageResource(R.drawable.share)
         holder.commentButton.setImageResource(R.drawable.comment)
+
+        holder.likeButton.setOnClickListener {
+            onClickLike(post.postId, position)
+        }
     }
 
     override fun getItemCount(): Int = differ.currentList.size
 
-    fun likeUnsyncedPosts() {
-        CoroutineScope(Dispatchers.IO).launch {
-            val pendingLikes = pendingLikeDbHelper.getAllPendingLikes()
-            Log.d("pendingLikes", "Size of pending likes: ${pendingLikes.size}")
-
-            for (pending in pendingLikes) {
-                Log.d("apiStatus", "Trying like for: ${pending.postId}")
-                try {
-                    val response =
-                        if (pending.liked) {
-                            RetrofitApiClient.postsApiService.likePost(
-                                LikeBody(true, pending.postId),
-                            )
-                        } else {
-                            RetrofitApiClient.postsApiService.dislikePost()
-                        }
-
-                    if (response.isSuccessful) {
-                        pendingLikeDbHelper.removePendingLike(pending.postId)
-                        Log.d("apiStatus", "Synced like: ${pending.postId}")
-                    }
-                } catch (e: Exception) {
-                    Log.e("apiStatus", "Sync failed", e)
-                }
-            }
-        }
-    }
+//    fun likeUnsyncedPosts() {
+//        CoroutineScope(Dispatchers.IO).launch {
+//            val pendingLikes = pendingLikeDbHelper.getAllPendingLikes()
+//            Log.d("pendingLikes", "Size of pending likes: ${pendingLikes.size}")
+//
+//            for (pending in pendingLikes) {
+//                Log.d("apiStatus", "Trying like for: ${pending.postId}")
+//                try {
+//                    val response =
+//                        if (pending.liked) {
+//                            RetrofitApiClient.postsApiService.likePost(
+//                                LikeBody(true, pending.postId),
+//                            )
+//                        } else {
+//                            RetrofitApiClient.postsApiService.dislikePost()
+//                        }
+//
+//                    if (response.isSuccessful) {
+//                        pendingLikeDbHelper.removePendingLike(pending.postId)
+//                        Log.d("apiStatus", "Synced like: ${pending.postId}")
+//                    }
+//                } catch (e: Exception) {
+//                    Log.e("apiStatus", "Sync failed", e)
+//                }
+//            }
+//        }
+//    }
 
     inner class Holder(
         view: View,
