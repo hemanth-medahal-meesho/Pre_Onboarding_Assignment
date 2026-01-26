@@ -37,6 +37,7 @@ class SignInActivity : AppCompatActivity() {
                         Toast.makeText(this, "Successfully registered!", Toast.LENGTH_SHORT).show()
                         val intent = Intent(this@SignInActivity, MainActivity::class.java)
                         startActivity(intent)
+                        finish()
                     }
 
                     is SigninNav.PasswordsDoNotMatch -> {

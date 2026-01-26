@@ -18,10 +18,9 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.instalgam.adapter.PostAdapter
 import com.example.instalgam.connectivity.NetworkObserver
 import com.example.instalgam.repository.PostRepository
+import com.example.instalgam.repository.PreferencesRepository
 import com.example.instalgam.room.PendingLikeDatabase
-import com.example.instalgam.room.PendingLikeDatabaseHelper
 import com.example.instalgam.room.PostDatabase
-import com.example.instalgam.room.PostDatabaseHelper
 import com.example.instalgam.viewmodel.NavigationEvent
 import com.example.instalgam.viewmodel.PostViewModel
 import com.example.instalgam.viewmodel.ToastEvent
@@ -32,19 +31,20 @@ class PostFeedActivity : AppCompatActivity() {
     private lateinit var signOutButton: Button
     private lateinit var postAdapter: PostAdapter
     private lateinit var reelsButton: Button
-    private lateinit var dbHelper: PostDatabaseHelper
-    private lateinit var pendingLikeDbHelper: PendingLikeDatabaseHelper
+
+//    private lateinit var dbHelper: PostDatabaseHelper
+//    private lateinit var pendingLikeDbHelper: PendingLikeDatabaseHelper
     private lateinit var networkObserver: NetworkObserver
     private val viewModel: PostViewModel by viewModels {
         val sp = getSharedPreferences("loginStatus", Context.MODE_PRIVATE)
-        val repository =
+        val postRepository =
             PostRepository(
-                sp,
                 PostDatabase.getInstance(applicationContext).postDao(),
                 PendingLikeDatabase.getInstance(applicationContext).pendingLikesDao(),
             )
+        val preferencesRepository = PreferencesRepository(sp)
         object : ViewModelProvider.Factory {
-            override fun <T : ViewModel> create(modelClass: Class<T>): T = PostViewModel(repository) as T
+            override fun <T : ViewModel> create(modelClass: Class<T>): T = PostViewModel(postRepository, preferencesRepository) as T
         }
     }
 
@@ -143,6 +143,11 @@ class PostFeedActivity : AppCompatActivity() {
 // checkConnectivityStatus()
         networkObserver = NetworkObserver(applicationContext)
         observeNetworkStatus()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        viewModel.deleteAllPendingLikes()
     }
 
     fun observeNetworkStatus() {

@@ -61,6 +61,7 @@ class LoginActivity : AppCompatActivity() {
                     is LoginNav.LoginSuccess -> {
                         val intent = Intent(this@LoginActivity, PostFeedActivity::class.java)
                         startActivity(intent)
+                        finish()
                     }
 
                     is LoginNav.LoginFailure -> {

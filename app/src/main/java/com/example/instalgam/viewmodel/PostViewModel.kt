@@ -10,12 +10,14 @@ import com.example.instalgam.apiClient.LikeBody
 import com.example.instalgam.apiClient.RetrofitApiClient
 import com.example.instalgam.model.Post
 import com.example.instalgam.repository.PostRepository
+import com.example.instalgam.repository.PreferencesRepository
 import com.example.instalgam.room.DatabasePost
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 class PostViewModel(
     private val repository: PostRepository,
+    private val preferencesRepository: PreferencesRepository,
 ) : ViewModel() {
     private val _navigationEvent = MutableLiveData<NavigationEvent?>()
     val navigationEvent: LiveData<NavigationEvent?> = _navigationEvent
@@ -47,7 +49,7 @@ class PostViewModel(
 
     fun onSignOutButtonClick() {
         _navigationEvent.value = NavigationEvent.SignOut
-        repository.signOutUser()
+        preferencesRepository.signOutUser()
     }
 
     fun onReelsButtonClick() {
@@ -97,6 +99,12 @@ class PostViewModel(
         }
     }
 
+    fun deleteAllPendingLikes() {
+        viewModelScope.launch {
+            repository.removeAllLikes()
+        }
+    }
+
     fun fetchOnlinePosts() {
         viewModelScope.launch {
             val status = repository.fetchPostsOnline()
@@ -115,7 +123,7 @@ class PostViewModel(
             return
         }
 
-        if (!isConnected) {
+        if (isConnected) {
             likeUnsyncedPosts()
         }
 
@@ -137,24 +145,44 @@ class PostViewModel(
             val pendingLikes = repository.getAllPendingLikes()
             Log.d("pendingLikes", "Size of pending likes: ${pendingLikes.size}")
 
-            for (pending in pendingLikes) {
-                Log.d("apiStatus", "Trying like for: ${pending.postId}")
-                try {
-                    val response =
-                        if (pending.liked) {
-                            RetrofitApiClient.postsApiService.likePost(
-                                LikeBody(true, pending.postId),
-                            )
-                        } else {
-                            RetrofitApiClient.postsApiService.dislikePost()
-                        }
+            if (pendingLikes.isEmpty()) {
+                Log.d("apiStatus", "No pending likes to sync")
+                return@launch
+            }
 
-                    if (response.isSuccessful) {
-                        repository.removePendingLike(pending.postId)
-                        Log.d("apiStatus", "Synced like: ${pending.postId}")
+            viewModelScope.launch {
+                for ((index, pending) in pendingLikes.withIndex()) {
+//                if (index > 0) {
+//                    kotlinx.coroutines.delay(100)
+//                }
+
+                    try {
+                        val response =
+                            if (pending.liked) {
+                                Log.d("apiStatus", "Liking post: ${pending.postId}")
+                                RetrofitApiClient.postsApiService.likePost(
+                                    LikeBody(true, pending.postId),
+                                )
+                            } else {
+                                Log.d("apiStatus", "Disliking post: ${pending.postId}")
+                                // Note: dislikePost() doesn't take postId parameter in current API
+                                // This might need to be fixed if the API requires it
+                                RetrofitApiClient.postsApiService.dislikePost()
+                            }
+
+                        if (response.isSuccessful) {
+                            repository.removePendingLike(pending.postId)
+                            Log.d("apiStatus", "Successfully synced like for post: ${pending.postId}")
+                        } else {
+                            Log.e("apiStatus", "Sync failed for post ${pending.postId}: HTTP ${response.code()}, ${response.message()}")
+                        }
+                    } catch (e: java.net.SocketTimeoutException) {
+                        Log.e("apiStatus", "Timeout while syncing post ${pending.postId}", e)
+                        // Continue with next post instead of stopping
+                    } catch (e: Exception) {
+                        Log.e("apiStatus", "Sync failed for post ${pending.postId}", e)
+                        // Continue with next post instead of stopping
                     }
-                } catch (e: Exception) {
-                    Log.e("apiStatus", "Sync failed", e)
                 }
             }
         }

@@ -14,7 +14,6 @@ import coil3.request.transformations
 import coil3.transform.CircleCropTransformation
 import com.example.instalgam.R
 import com.example.instalgam.model.Post
-import com.example.instalgam.room.PendingLikeDatabaseHelper
 
 class PostAdapter(
     val context: Context,

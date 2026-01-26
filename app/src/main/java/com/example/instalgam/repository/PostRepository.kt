@@ -1,8 +1,6 @@
 package com.example.instalgam.repository
 
-import android.content.SharedPreferences
 import android.util.Log
-import androidx.core.content.edit
 import com.example.instalgam.apiClient.LikeBody
 import com.example.instalgam.apiClient.RetrofitApiClient
 import com.example.instalgam.model.Post
@@ -15,7 +13,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 
 class PostRepository(
-    val sp: SharedPreferences,
     val postDao: PostDao,
     val pendingLikesDao: PendingLikesDao,
 ) {
@@ -138,12 +135,6 @@ class PostRepository(
             }
         }
 
-    fun signOutUser() {
-        sp.edit {
-            putString("loginStatus", null)
-        }
-    }
-
     suspend fun getAllPendingLikes(): List<PendingLike> =
         withContext(Dispatchers.IO) {
             pendingLikesDao.fetchAll()
@@ -152,6 +143,12 @@ class PostRepository(
     suspend fun removePendingLike(postId: String) {
         withContext(Dispatchers.IO) {
             pendingLikesDao.removeLike(postId)
+        }
+    }
+
+    suspend fun removeAllLikes() {
+        withContext(Dispatchers.IO) {
+            pendingLikesDao.flush()
         }
     }
 }
