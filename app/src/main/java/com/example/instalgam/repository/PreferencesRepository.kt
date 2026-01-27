@@ -11,4 +11,6 @@ class PreferencesRepository(
             putString("loginStatus", null)
         }
     }
+
+    fun fetchUsername(): String? = sharedPreferences.getString("loginStatus", null)?.takeIf { it.isNotEmpty() }
 }

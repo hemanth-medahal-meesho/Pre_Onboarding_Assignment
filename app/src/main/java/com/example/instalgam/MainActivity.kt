@@ -8,28 +8,33 @@ import android.widget.Button
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import com.example.instalgam.repository.PreferencesRepository
 import com.example.instalgam.viewmodel.MainViewModel
 import com.example.instalgam.viewmodel.Navigation
-import kotlinx.coroutines.launch
-import kotlin.jvm.java
 
 class MainActivity : AppCompatActivity() {
-    val username: String = "admin"
-    val password: String = "password"
-
-    private val viewmodel: MainViewModel by viewModels()
+    private val viewmodel: MainViewModel by viewModels {
+        val sp: SharedPreferences = getSharedPreferences(getString(R.string.shared_preferences_file_name), Context.MODE_PRIVATE)
+        val repo = PreferencesRepository(sp)
+        object : ViewModelProvider.Factory {
+            override fun <T : ViewModel> create(modelClass: Class<T>): T = MainViewModel(repo) as T
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        val sp: SharedPreferences = getSharedPreferences(getString(R.string.shared_preferences_file_name), Context.MODE_PRIVATE)
-        val username: String? = sp.getString("loginStatus", null)
 
-        if (username != null && username.isNotEmpty()) {
-            val intent = Intent(this@MainActivity, PostFeedActivity::class.java)
-            startActivity(intent)
-            finish()
+        viewmodel.checkLoginStatus()
+        viewmodel.shouldNavigateToPostFeed.observe(this) { shouldNavigate ->
+            if (shouldNavigate == true) {
+                val intent = Intent(this@MainActivity, PostFeedActivity::class.java)
+                startActivity(intent)
+                finish()
+                viewmodel.navigationToPostFeedComplete()
+            }
         }
 
         setContentView(R.layout.landing_page)

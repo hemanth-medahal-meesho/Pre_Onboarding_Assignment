@@ -1,6 +1,8 @@
 package com.example.instalgam
 
+import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.os.Bundle
 import android.widget.Button
 import android.widget.EditText
@@ -10,11 +12,20 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import com.example.instalgam.repository.LogInRepository
 import com.example.instalgam.viewmodel.SigninNav
 import com.example.instalgam.viewmodel.SigninViewModel
 
 class SignInActivity : AppCompatActivity() {
-    private val viewmodel: SigninViewModel by viewModels()
+    private val viewmodel: SigninViewModel by viewModels {
+        val sp: SharedPreferences = getSharedPreferences(getString(R.string.shared_preferences_file_name), Context.MODE_PRIVATE)
+        val repo = LogInRepository(sp)
+        object : ViewModelProvider.Factory {
+            override fun <T : ViewModel> create(modelClass: Class<T>): T = SigninViewModel(repo) as T
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
