@@ -36,8 +36,6 @@ android {
     kotlinOptions {
         jvmTarget = "11"
     }
-
-
 }
 
 dependencies {
@@ -64,8 +62,15 @@ dependencies {
     implementation("androidx.media3:media3-exoplayer-dash:1.9.0")
     implementation("androidx.media3:media3-ui:1.9.0")
     implementation("androidx.media3:media3-ui-compose:1.9.0")
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
+//    androidTestImplementation(libs.androidx.junit)
+//    androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation("androidx.test.ext:junit:1.3.0")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
+    androidTestImplementation("androidx.test.espresso:espresso-intents:3.7.0")
+    testImplementation("com.google.truth:truth:1.4.4")
     testImplementation("io.mockk:mockk:1.13.3")
     testImplementation("androidx.test.ext:junit:1.1.5")
+    testImplementation("androidx.arch.core:core-testing:2.2.0")
+    androidTestImplementation("androidx.test:runner:1.5.2")
+    androidTestImplementation("androidx.test:rules:1.5.0")
 }

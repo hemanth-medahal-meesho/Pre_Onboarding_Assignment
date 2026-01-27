@@ -17,7 +17,7 @@ import com.example.instalgam.model.Post
 
 class PostAdapter(
     val context: Context,
-    private val onClickLike: (String, Int) -> Unit,
+    private val onClickLike: (String) -> Unit,
 ) : RecyclerView.Adapter<PostAdapter.Holder>() {
     private val diffUtil =
         object : DiffUtil.ItemCallback<Post>() {
@@ -38,8 +38,8 @@ class PostAdapter(
         differ.submitList(data)
     }
 
-    val currentList: List<Post>
-        get() = differ.currentList
+//    val currentList: List<Post>
+//        get() = differ.currentList
 
     override fun onCreateViewHolder(
         parent: ViewGroup,
@@ -72,41 +72,13 @@ class PostAdapter(
         holder.commentButton.setImageResource(R.drawable.comment)
 
         holder.likeButton.setOnClickListener {
-            onClickLike(post.postId, position)
+            onClickLike(post.postId)
         }
     }
 
     override fun getItemCount(): Int = differ.currentList.size
 
-//    fun likeUnsyncedPosts() {
-//        CoroutineScope(Dispatchers.IO).launch {
-//            val pendingLikes = pendingLikeDbHelper.getAllPendingLikes()
-//            Log.d("pendingLikes", "Size of pending likes: ${pendingLikes.size}")
-//
-//            for (pending in pendingLikes) {
-//                Log.d("apiStatus", "Trying like for: ${pending.postId}")
-//                try {
-//                    val response =
-//                        if (pending.liked) {
-//                            RetrofitApiClient.postsApiService.likePost(
-//                                LikeBody(true, pending.postId),
-//                            )
-//                        } else {
-//                            RetrofitApiClient.postsApiService.dislikePost()
-//                        }
-//
-//                    if (response.isSuccessful) {
-//                        pendingLikeDbHelper.removePendingLike(pending.postId)
-//                        Log.d("apiStatus", "Synced like: ${pending.postId}")
-//                    }
-//                } catch (e: Exception) {
-//                    Log.e("apiStatus", "Sync failed", e)
-//                }
-//            }
-//        }
-//    }
-
-    inner class Holder(
+    class Holder(
         view: View,
     ) : RecyclerView.ViewHolder(view) {
         val username: TextView = view.findViewById(R.id.usernameText)

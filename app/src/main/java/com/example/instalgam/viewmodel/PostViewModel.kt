@@ -65,10 +65,7 @@ class PostViewModel(
 //        }
 //    }
 
-    fun onClickLike(
-        postID: String,
-        position: Int,
-    ) {
+    fun onClickLike(postID: String) {
         viewModelScope.launch {
             val likeStatus = repository.getLikeStatus(postID)
 
@@ -151,7 +148,7 @@ class PostViewModel(
             }
 
             viewModelScope.launch {
-                for ((index, pending) in pendingLikes.withIndex()) {
+                for ((_, pending) in pendingLikes.withIndex()) {
 //                if (index > 0) {
 //                    kotlinx.coroutines.delay(100)
 //                }

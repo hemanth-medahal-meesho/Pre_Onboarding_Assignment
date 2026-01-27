@@ -3,7 +3,6 @@ package com.example.instalgam.repository
 import android.util.Log
 import com.example.instalgam.apiClient.LikeBody
 import com.example.instalgam.apiClient.RetrofitApiClient
-import com.example.instalgam.model.Post
 import com.example.instalgam.room.DatabasePost
 import com.example.instalgam.room.PendingLike
 import com.example.instalgam.room.PendingLikesDao
@@ -18,26 +17,26 @@ class PostRepository(
 ) {
     fun getPosts(): Flow<List<DatabasePost>> = postDao.fetchLivePosts()
 
-    suspend fun getPostsAtFirst(): List<DatabasePost> = postDao.fetchAll()
+//    suspend fun getPostsAtFirst(): List<DatabasePost> = postDao.fetchAll()
 
-    suspend fun fetchPostsOffline(): List<Post> {
-        val dbPosts = getPostsAtFirst()
-        Log.d("dbStatus", "Loaded ${dbPosts.size} posts from database")
-
-        val posts =
-            dbPosts.map {
-                Post(
-                    it.postId,
-                    it.userName,
-                    it.profilePicture,
-                    it.postImage,
-                    it.likeCount,
-                    it.likedByUser,
-                )
-            }
-//        postAdapter.submitList(posts)
-        return posts
-    }
+//    suspend fun fetchPostsOffline(): List<Post> {
+//        val dbPosts = getPostsAtFirst()
+//        Log.d("dbStatus", "Loaded ${dbPosts.size} posts from database")
+//
+//        val posts =
+//            dbPosts.map {
+//                Post(
+//                    it.postId,
+//                    it.userName,
+//                    it.profilePicture,
+//                    it.postImage,
+//                    it.likeCount,
+//                    it.likedByUser,
+//                )
+//            }
+// //        postAdapter.submitList(posts)
+//        return posts
+//    }
 
     suspend fun fetchPostsOnline(): Pair<Int, String?> {
         try {
@@ -94,14 +93,14 @@ class PostRepository(
                 } else {
                     false
                 }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 false
             }
         }
 
     suspend fun getLikeStatus(postID: String): Boolean = postDao.likeStatus(postID)
 
-    suspend fun getLikeCount(postID: String): Int = postDao.likeCount(postID)
+//    suspend fun getLikeCount(postID: String): Int = postDao.likeCount(postID)
 
     suspend fun getPendingLike(postId: String): PendingLike? =
         withContext(Dispatchers.IO) {

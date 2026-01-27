@@ -40,19 +40,6 @@ class LoginActivity : AppCompatActivity() {
             val pwd: String = passwordField.text.toString()
 
             viewmodel.onClick(uname, pwd)
-//            if (uname == username && pwd == password) {
-//                with(sp.edit()) {
-//                    putString(getString(R.string.logged_in_user), uname)
-//                    apply()
-//                }
-//                val intent = Intent(this@LoginActivity, PostFeedActivity::class.java)
-//                intent.putExtra("USER_USERNAME", uname)
-//                startActivity(intent)
-//            } else {
-//                Toast.makeText(this, "Invalid credentials. Please try again.", Toast.LENGTH_SHORT).show()
-//                usernameField.setText(null)
-//                passwordField.setText(null)
-//            }
         }
         viewmodel.navVal.observe(this) { navigation ->
 
